@@ -1,0 +1,19 @@
+{
+	"name": "jp.lightgive.uiutil",
+	"version": "1.0.0",
+	"displayName": "UIUtil",
+	"description": "",
+	"unity": "2020.3",
+	"unityRelease": "0b5",
+	"keywords": [
+		"keyword1",
+		"keyword2",
+		"keyword3"
+	],
+	"author": {
+		"name": "LightGive",
+		"email": "roi.akase@outlook.jp",
+		"url": "https://github.com/LightGive"
+	},
+	"hideInEditor": true
+}
