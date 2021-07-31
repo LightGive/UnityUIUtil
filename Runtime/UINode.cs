@@ -126,7 +126,7 @@ namespace LightGive.UIUtil
 		/// <summary>
 		/// 閉じる
 		/// </summary>
-		public virtual void Hide()
+		public void Hide()
 		{
 			IsShow = false;
 			OnHideBefore();
