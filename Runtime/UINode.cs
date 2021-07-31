@@ -103,7 +103,7 @@ namespace LightGive.UIUtil
 		/// </summary>
 		/// <param name="isParentOpen">親階層のUIを同時に開くかどうか</param>
 		/// <param name="isChildrenOpen">子階層のUIを同時に開くかどうか</param>
-		public virtual void Show(bool isParentOpen = false, bool isChildrenOpen = false)
+		public void Show(bool isParentOpen = false, bool isChildrenOpen = false)
 		{
 			if (Parent != this && isParentOpen)
 			{
@@ -118,7 +118,9 @@ namespace LightGive.UIUtil
 				}
 			}
 			IsShow = true;
+			OnShowBefore();
 			gameObject.SetActive(true);
+			OnShowAfter();
 		}
 
 		/// <summary>
@@ -127,7 +129,9 @@ namespace LightGive.UIUtil
 		public virtual void Hide()
 		{
 			IsShow = false;
+			OnHideBefore();
 			gameObject.SetActive(false);
+			OnHideAfter();
 		}
 
 		/// <summary>
@@ -135,12 +139,20 @@ namespace LightGive.UIUtil
 		/// </summary>
 		protected virtual void OnInit() { }
 		/// <summary>
-        /// UIが表示された時のコールバック
+        /// UIが表示される前のコールバック
         /// </summary>
-		protected virtual void OnShow() { }
+		protected virtual void OnShowBefore() { }
 		/// <summary>
-        /// UIが非表示になったときのコールバック
+		/// UIが表示された後のコールバック
+		/// </summary>
+		protected virtual void OnShowAfter() { }
+		/// <summary>
+        /// UIが非表示になる前のコールバック
         /// </summary>
-		protected virtual void OnHide() { }
+		protected virtual void OnHideBefore() { }
+		/// <summary>
+		/// UIが非表示になった後のコールバック
+		/// </summary>
+		protected virtual void OnHideAfter() { }
 	}
 }
