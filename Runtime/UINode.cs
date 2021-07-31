@@ -49,6 +49,11 @@ namespace LightGive.UIUtil
 			return IsShow ? Parent.IsShowParent() : false;
 		}
 
+		/// <summary>
+        /// このUIを含め小階層のUIをリストに追加する
+        /// </summary>
+        /// <param name="nodeList"></param>
+        /// <param name="parent"></param>
 		public void SetList(List<UINode> nodeList, UINode parent)
 		{
 			nodeList.Add(this);
@@ -76,6 +81,7 @@ namespace LightGive.UIUtil
 			}
 
 			gameObject.SetActive(false);
+			OnInit();
 
 			foreach (var c in Children)
 			{
@@ -83,6 +89,13 @@ namespace LightGive.UIUtil
 			}
 		}
 
+		/// <summary>
+        /// 小階層のUIを全て表示させる
+        /// </summary>
+		public void ShowAllChild()
+		{
+			Children.ForEach(x => x.Show());
+		}
 
 		/// <summary>
 		/// UIを表示する。
@@ -108,11 +121,6 @@ namespace LightGive.UIUtil
 			gameObject.SetActive(true);
 		}
 
-		public void ShowAllChild()
-		{
-			Children.ForEach(x => x.Show());
-		}
-
 		/// <summary>
 		/// 閉じる
 		/// </summary>
@@ -121,5 +129,18 @@ namespace LightGive.UIUtil
 			IsShow = false;
 			gameObject.SetActive(false);
 		}
+
+		/// <summary>
+		/// 初期化された時のコールバック(Awake時に呼ばれる)
+		/// </summary>
+		protected virtual void OnInit() { }
+		/// <summary>
+        /// UIが表示された時のコールバック
+        /// </summary>
+		protected virtual void OnShow() { }
+		/// <summary>
+        /// UIが非表示になったときのコールバック
+        /// </summary>
+		protected virtual void OnHide() { }
 	}
 }
