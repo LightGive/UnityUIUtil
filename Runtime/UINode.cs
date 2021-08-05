@@ -117,6 +117,11 @@ namespace LightGive.UIUtil
 					c.Show(false, false);
 				}
 			}
+
+			if (IsShow)
+			{
+				return;
+			}
 			IsShow = true;
 			OnShowBefore();
 			gameObject.SetActive(true);
@@ -128,6 +133,10 @@ namespace LightGive.UIUtil
 		/// </summary>
 		public void Hide()
 		{
+            if (!IsShow)
+            {
+				return;
+            }
 			IsShow = false;
 			OnHideBefore();
 			gameObject.SetActive(false);
