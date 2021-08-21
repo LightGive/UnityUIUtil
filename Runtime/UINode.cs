@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace LightGive.UIUtil
@@ -21,17 +20,15 @@ namespace LightGive.UIUtil
 		public bool IsTopNode { get; set; } = false;
 		public int ID { get; private set; }
 		public UITreeView UITreeView { get; set; }
-		protected List<UINode> Children { get; private set; }
-		private UINode Parent { get; set; }
+
+		List<UINode> _childrenList;
+		UINode _parent;
 
 		public int SetID(int preID)
 		{
 			preID++;
 			ID = preID;
-			foreach (var c in Children)
-			{
-				preID = c.SetID(preID);
-			}
+			_childrenList.ForEach(c => c.SetID(preID));
 			return preID;
 		}
 
@@ -41,27 +38,20 @@ namespace LightGive.UIUtil
 		/// <returns></returns>
 		public bool IsShowParent()
 		{
-			if (IsTopNode)
-			{
-				return true;
-			}
-
-			return IsShow ? Parent.IsShowParent() : false;
+			if (IsTopNode) { return true; }
+			return IsShow ? _parent.IsShowParent() : false;
 		}
 
 		/// <summary>
-        /// このUIを含め小階層のUIをリストに追加する
-        /// </summary>
-        /// <param name="nodeList"></param>
-        /// <param name="parent"></param>
+		/// このUIを含め小階層のUIをリストに追加する
+		/// </summary>
+		/// <param name="nodeList"></param>
+		/// <param name="parent"></param>
 		public void SetList(List<UINode> nodeList, UINode parent)
 		{
 			nodeList.Add(this);
-			Parent = parent;
-			foreach (var c in Children)
-			{
-				c.SetList(nodeList, this);
-			}
+			_parent = parent;
+			_childrenList.ForEach(c => c.SetList(nodeList, this));
 		}
 
 		/// <summary>
@@ -69,33 +59,27 @@ namespace LightGive.UIUtil
 		/// </summary>
 		public void Init()
 		{
-			Children = new List<UINode>();
+			_childrenList = new List<UINode>();
 
 			for (var i = 0; i < transform.childCount; i++)
 			{
-				if (!transform.GetChild(i).TryGetComponent(out UINode node))
-				{
-					continue;
-				}
-				Children.Add(node);
+				if (!transform.GetChild(i).TryGetComponent(out UINode node)) { continue; }
+				_childrenList.Add(node);
 			}
-
 			gameObject.SetActive(false);
 			OnInit();
-
-			foreach (var c in Children)
-			{
-				c.Init();
-			}
+			_childrenList.ForEach(c => c.Init());
 		}
 
 		/// <summary>
-        /// 小階層のUIを全て表示させる
+		/// 小階層のUIを全て表示させる
+		/// </summary>
+		public void ShowAllChild() => _childrenList.ForEach(x => x.Show());
+
+		/// <summary>
+        /// UnityEventコールバック用
         /// </summary>
-		public void ShowAllChild()
-		{
-			Children.ForEach(x => x.Show());
-		}
+		public void Show() => Show(true, false);
 
 		/// <summary>
 		/// UIを表示する。
@@ -103,27 +87,16 @@ namespace LightGive.UIUtil
 		/// </summary>
 		/// <param name="isParentOpen">親階層のUIを同時に開くかどうか</param>
 		/// <param name="isChildrenOpen">子階層のUIを同時に開くかどうか</param>
-		public void Show(bool isParentOpen = false, bool isChildrenOpen = false)
+		public void Show(bool isParentOpen, bool isChildrenOpen) => UITreeView.StartCoroutine(ShowCoroutine(isParentOpen, isChildrenOpen));
+
+		IEnumerator ShowCoroutine(bool isParentOpen, bool isChildrenOpen)
 		{
-			if (Parent != this && isParentOpen)
-			{
-				Parent.Show(true);
-			}
-
-			if (isChildrenOpen)
-			{
-				foreach (var c in Children)
-				{
-					c.Show(false, false);
-				}
-			}
-
-			if (IsShow)
-			{
-				return;
-			}
+			if (_parent != this && isParentOpen) { _parent.Show(true, false); }
+			if (isChildrenOpen) { _childrenList.ForEach(c => c.Show(false, false)); }
+			if (IsShow) { yield break; }
 			IsShow = true;
 			OnShowBefore();
+			yield return new WaitUntil(ShowConditions);
 			gameObject.SetActive(true);
 			OnShowAfter();
 		}
@@ -131,14 +104,14 @@ namespace LightGive.UIUtil
 		/// <summary>
 		/// 閉じる
 		/// </summary>
-		public void Hide()
-		{
-            if (!IsShow)
-            {
-				return;
-            }
+		public void Hide() => UITreeView.StartCoroutine(HideCoroutine());
+
+		IEnumerator HideCoroutine()
+        {
+			if (!IsShow) { yield break; }
 			IsShow = false;
 			OnHideBefore();
+			yield return new WaitUntil(HideConditions);
 			gameObject.SetActive(false);
 			OnHideAfter();
 		}
@@ -147,14 +120,26 @@ namespace LightGive.UIUtil
 		/// 初期化された時のコールバック(Awake時に呼ばれる)
 		/// </summary>
 		protected virtual void OnInit() { }
+
 		/// <summary>
-        /// UIが表示される前のコールバック
+        /// 表示する条件
         /// </summary>
+        /// <returns></returns>
+		protected virtual bool ShowConditions() => true;
+		/// <summary>
+		/// UIが表示される前のコールバック
+		/// </summary>
 		protected virtual void OnShowBefore() { }
 		/// <summary>
 		/// UIが表示された後のコールバック
 		/// </summary>
 		protected virtual void OnShowAfter() { }
+
+		/// <summary>
+        /// 非表示にする条件
+        /// </summary>
+        /// <returns></returns>
+		protected virtual bool HideConditions() => true;
 		/// <summary>
         /// UIが非表示になる前のコールバック
         /// </summary>

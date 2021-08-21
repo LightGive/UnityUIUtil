@@ -7,22 +7,20 @@ namespace LightGive.UIUtil
 {
     public class UITreeView : MonoBehaviour
     {
-        [SerializeField]
-        private UINode topNode;
-
-        public List<UINode> AllNodeList { get; set; }
+        [SerializeField] UINode _topNode = null;
+        public List<UINode> AllNodeList { get; set; } = null;
 
         private void Awake()
         {
             AllNodeList = new List<UINode>();
-
-            topNode.IsTopNode = true;
-            topNode.Init();
-            topNode.SetList(AllNodeList, topNode);
+            _topNode.IsTopNode = true;
+            _topNode.Init();
+            _topNode.SetList(AllNodeList, _topNode);
             AllNodeList.ForEach(x => x.UITreeView = this);
-            var count = topNode.SetID(0);
+            var count = _topNode.SetID(0);
             Debug.Log("全てのUIノード数" + count.ToString());
         }
+
         /// <summary>
         /// ノードを継承したUIを取得する
         /// Start以下で使用するように

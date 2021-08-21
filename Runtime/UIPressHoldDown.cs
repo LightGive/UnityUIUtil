@@ -8,14 +8,17 @@ namespace LightGive.UIUtil
 {
     public class UIPressHoldDown : UIPressHold
     {
-        public UnityEvent OnPressHoldDownEvent;
-        [SerializeField]
-        private float pressHoldDownTime;
+        public UnityEvent OnPressHoldDownEvent = null;
+
+        /// <summary>
+        /// 長押しの時間
+        /// </summary>
+        [SerializeField] float _pressHoldDownTime = 1.0f;
 
         public float PressTime
         {
-            get => pressHoldDownTime;
-            private set => pressHoldDownTime = Mathf.Clamp(value, 0.0f, Mathf.Infinity);
+            get => _pressHoldDownTime;
+            private set => _pressHoldDownTime = Mathf.Clamp(value, 0.0f, Mathf.Infinity);
         }
 
         public Coroutine CoroutineHold { get; set; } = null;
@@ -31,7 +34,7 @@ namespace LightGive.UIUtil
         {
             base.OnPointerDown(eventData);
             CancelCoroutine(this);
-            CoroutineHold = StartCoroutine(TimeForPointerDown(pressHoldDownTime));
+            CoroutineHold = StartCoroutine(TimeForPointerDown(_pressHoldDownTime));
         }
 
         public override void OnPointerUp(PointerEventData eventData)
