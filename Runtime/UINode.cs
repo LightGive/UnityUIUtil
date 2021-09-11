@@ -17,7 +17,7 @@ namespace LightGive.UIUtil
 		/// <summary>
 		/// 最上層のノードか
 		/// </summary>
-		public bool IsTopNode { get; set; } = false;
+		public bool IsTopNode => UITreeView.IsTopNode(this);
 		public int ID { get; private set; }
 		public UITreeView UITreeView { get; set; }
 
