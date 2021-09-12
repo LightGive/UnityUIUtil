@@ -13,24 +13,19 @@ namespace LightGive.UIUtil
 		/// <summary>
 		/// 表示しているか
 		/// </summary>
-		public bool IsShow { get; private set; } = false;
+		public virtual bool IsShow { get; private set; } = false;
 		/// <summary>
 		/// 最上層のノードか
 		/// </summary>
 		public bool IsTopNode => UITreeView.IsTopNode(this);
-		public int ID { get; private set; }
+		/// <summary>
+        /// UIのID
+        /// </summary>
+		public UIIDType ID = null;
 		public UITreeView UITreeView { get; set; }
 
 		List<UINode> _childrenList;
 		UINode _parent;
-
-		public int SetID(int preID)
-		{
-			preID++;
-			ID = preID;
-			_childrenList.ForEach(c => c.SetID(preID));
-			return preID;
-		}
 
 		/// <summary>
 		/// 親の階層が表示しているかチェック
@@ -59,8 +54,8 @@ namespace LightGive.UIUtil
 		/// </summary>
 		public void Init()
 		{
+			ID = new UIIDType();
 			_childrenList = new List<UINode>();
-
 			for (var i = 0; i < transform.childCount; i++)
 			{
 				if (!transform.GetChild(i).TryGetComponent(out UINode node)) { continue; }
