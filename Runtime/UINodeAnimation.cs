@@ -1,60 +1,67 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace LightGive.UIUtil
 {
     [RequireComponent(typeof(Animation))]
     public class UINodeAnimation : UINode
     {
-        [SerializeField] AnimationClip _showClip;
-        [SerializeField] AnimationClip _hideClip;
-        [SerializeField] Animation _anim;
+        [SerializeField] AnimationClip _showClip = null;
+        [SerializeField] AnimationClip _hideClip = null;
+        [SerializeField] Animation _anim = null;
 
-        bool _isEndAnimHide = false;
+        private void Reset() => _anim = gameObject.GetComponent<Animation>();
 
-        public UnityEvent OnShowAnimationEnd { get; set; } = new UnityEvent();
-        public UnityEvent OnHideAnimationEnd { get; set; } = new UnityEvent();
-
-        private void Reset() => _anim = gameObject.GetComponent<Animation>();  
-
-        protected override void OnShowBefore()
+        protected override IEnumerator ShowBeforeCoroutine(UINode baseNode)
         {
-            base.OnShowBefore();
-            _anim.Play(_showClip.name);
-        }
-
-        protected override void OnShowAfter()
-        {
-            base.OnShowAfter();
-            UITreeView.StartCoroutine(AnimationEndCheck(_showClip.name, () => OnShowAnimationEnd?.Invoke()));
-        }
-
-        protected override bool HideConditions() => _isEndAnimHide;
-
-        protected override void OnHideBefore()
-        {
-            base.OnHideBefore();
-            _isEndAnimHide = false;
-            _anim.Play(_hideClip.name);
-            UITreeView.StartCoroutine(AnimationEndCheck(_hideClip.name, () =>
+            if (_anim == null || _showClip == null) { yield break; }
+            if (baseNode != this && !IsShow)
             {
-                _isEndAnimHide = true;
-                OnHideAnimationEnd?.Invoke();
-            }));
+                //スキップ
+                _anim.Play(_showClip.name, PlayMode.StopAll);
+                _anim[_showClip.name].normalizedTime = 1.0f;
+                yield break;
+            }
+            else
+            {
+                _anim[_showClip.name].time = 0.0f;
+                _anim.Play(_showClip.name, PlayMode.StopAll);
+            }
+        }
+
+        protected override IEnumerator ShowAfterCoroutine(UINode baseNode)
+        {
+            if (_anim == null || !_anim.isPlaying) { yield break; }
+            yield return AnimationEndCheck(_showClip.name);
+        }
+
+        protected override IEnumerator HideBeforeCoroutine(UINode baseNode)
+        {
+            if (_anim == null || _hideClip == null) { yield break; }
+            _anim.Play(_hideClip.name);
+            if (baseNode != this && IsShow)
+            {
+                //スキップ
+                _anim.Play(_hideClip.name, PlayMode.StopAll);
+                _anim[_hideClip.name].normalizedTime = 1.0f;
+                yield break;
+            }
+            else
+            {
+                _anim[_hideClip.name].time = 0.0f;
+                _anim.Play(_hideClip.name, PlayMode.StopAll);
+            }
+            yield return AnimationEndCheck(_hideClip.name);
         }
 
         /// <summary>
         /// アニメーションが終了するまで待つ
         /// </summary>
         /// <param name="animName">アニメーションの名前</param>
-        /// <param name="act">アニメーション終了時のコールバック</param>
         /// <returns></returns>
-        IEnumerator AnimationEndCheck(string animName, UnityAction act = null)
+        IEnumerator AnimationEndCheck(string animName)
         {
             while (_anim.IsPlaying(animName)) { yield return null; }
-            act?.Invoke();
         }
     }
 }

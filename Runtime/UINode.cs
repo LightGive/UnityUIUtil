@@ -13,7 +13,7 @@ namespace LightGive.UIUtil
 		/// <summary>
 		/// 表示しているか
 		/// </summary>
-		public virtual bool IsShow { get; private set; } = false;
+		public virtual bool IsShow { get; protected set; } = false;
 		/// <summary>
 		/// 最上層のノードか
 		/// </summary>
@@ -26,6 +26,8 @@ namespace LightGive.UIUtil
 
 		List<UINode> _childrenList;
 		UINode _parent;
+		Coroutine _showCoroutine = null;
+		Coroutine _hideCoroutine = null;
 
 		/// <summary>
 		/// 親の階層が表示しているかチェック
@@ -69,58 +71,71 @@ namespace LightGive.UIUtil
 		/// <summary>
 		/// 小階層のUIを全て表示させる
 		/// </summary>
-		public void ShowAllChild() => _childrenList.ForEach(x => x.Show());
-
-		/// <summary>
-        /// UnityEventコールバック用
-        /// </summary>
-		public void Show() => Show(true, false);
+		public void ShowAllChild()
+		{
+			_childrenList.ForEach(x => x.Show());
+		}
 
 		/// <summary>
 		/// UIを表示する。
 		/// 親階層のUINodeが閉じている時は表示されない
 		/// </summary>
-		/// <param name="isParentOpen">親階層のUIを同時に開くかどうか</param>
-		/// <param name="isChildrenOpen">子階層のUIを同時に開くかどうか</param>
-		public void Show(bool isParentOpen, bool isChildrenOpen) => UITreeView.StartCoroutine(ShowCoroutine(isParentOpen, isChildrenOpen));
-
-		IEnumerator ShowCoroutine(bool isParentOpen, bool isChildrenOpen)
+		public void Show()
 		{
-			if (_parent != this && isParentOpen) { _parent.Show(true, false); }
-			if (isChildrenOpen) { _childrenList.ForEach(c => c.Show(false, false)); }
-			if (IsShow) { yield break; }
-			IsShow = true;
-			OnShowBefore();
-			yield return new WaitUntil(ShowConditions);
-			gameObject.SetActive(true);
-			OnShowAfter();
+			_showCoroutine = UITreeView.StartCoroutine(ShowCoroutine(this));
 		}
+
+		IEnumerator ShowCoroutine(UINode baseNode)
+		{
+			if(baseNode != this && IsShow)
+            {
+				yield break;
+            }
+			if (_parent != this)
+			{
+				yield return _parent.ShowCoroutine(baseNode);
+			}
+			yield return ShowBeforeCoroutine(baseNode);
+			OnShowBefore();
+			IsShow = true;
+			gameObject.SetActive(true);
+			yield return ShowAfterCoroutine(baseNode);
+			OnShowAfter();
+			_showCoroutine = null;
+		}
+		protected virtual IEnumerator ShowBeforeCoroutine(UINode baseNode) { yield break; }
+		protected virtual IEnumerator ShowAfterCoroutine(UINode baseNode) { yield break; }
 
 		/// <summary>
 		/// 閉じる
 		/// </summary>
-		public void Hide() => UITreeView.StartCoroutine(HideCoroutine());
-
-		IEnumerator HideCoroutine()
-        {
-			if (!IsShow) { yield break; }
-			IsShow = false;
-			OnHideBefore();
-			yield return new WaitUntil(HideConditions);
-			gameObject.SetActive(false);
-			OnHideAfter();
+		public void Hide()
+		{
+			_hideCoroutine = UITreeView.StartCoroutine(HideCoroutine(this));
 		}
+
+		IEnumerator HideCoroutine(UINode baseNode)
+		{
+			yield return HideBeforeCoroutine(baseNode);
+			OnHideBefore();
+			IsShow = false;
+			gameObject.SetActive(false);
+			foreach (var node in _childrenList)
+			{
+				yield return node.HideCoroutine(baseNode);
+			}
+			yield return HideAfterCoroutine(baseNode);
+			OnHideAfter();
+			_hideCoroutine = null;
+		}
+
+		protected virtual IEnumerator HideBeforeCoroutine(UINode baseNode) { yield break; }
+		protected virtual IEnumerator HideAfterCoroutine(UINode baseNode) { yield break; }
 
 		/// <summary>
 		/// 初期化された時のコールバック(Awake時に呼ばれる)
 		/// </summary>
 		protected virtual void OnInit() { }
-
-		/// <summary>
-        /// 表示する条件
-        /// </summary>
-        /// <returns></returns>
-		protected virtual bool ShowConditions() => true;
 		/// <summary>
 		/// UIが表示される前のコールバック
 		/// </summary>
@@ -130,11 +145,6 @@ namespace LightGive.UIUtil
 		/// </summary>
 		protected virtual void OnShowAfter() { }
 
-		/// <summary>
-        /// 非表示にする条件
-        /// </summary>
-        /// <returns></returns>
-		protected virtual bool HideConditions() => true;
 		/// <summary>
         /// UIが非表示になる前のコールバック
         /// </summary>
