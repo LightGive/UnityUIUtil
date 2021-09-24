@@ -28,12 +28,20 @@ namespace LightGive.UIUtil
 		UINode _parent;
 		Coroutine _showCoroutine = null;
 		Coroutine _hideCoroutine = null;
+		bool _completeShow = false;
+		bool _completeHide = false;
+		int frame = 0;
 
-		/// <summary>
-		/// 親の階層が表示しているかチェック
-		/// </summary>
-		/// <returns></returns>
-		public bool IsShowParent()
+        private void Update()
+        {
+			frame++;
+        }
+
+        /// <summary>
+        /// 親の階層が表示しているかチェック
+        /// </summary>
+        /// <returns></returns>
+        public bool IsShowParent()
 		{
 			if (IsTopNode) { return true; }
 			return IsShow ? _parent.IsShowParent() : false;
@@ -82,55 +90,90 @@ namespace LightGive.UIUtil
 		/// </summary>
 		public void Show()
 		{
+			if(_showCoroutine != null || _completeShow) { return; }
+			if (_hideCoroutine != null)
+			{
+				StopCoroutine(_hideCoroutine);
+				HideImmediately();
+				_hideCoroutine = null;
+			}
+			_completeHide = false;
 			_showCoroutine = UITreeView.StartCoroutine(ShowCoroutine(this));
 		}
 
-		IEnumerator ShowCoroutine(UINode baseNode)
+		void ShowImmediately()
 		{
-			if(baseNode != this && IsShow)
-            {
-				yield break;
-            }
-			if (_parent != this)
+			if (_parent == this) { return; }
 			{
-				yield return _parent.ShowCoroutine(baseNode);
+				_parent.ShowImmediately();
 			}
-			yield return ShowBeforeCoroutine(baseNode);
-			OnShowBefore();
 			IsShow = true;
 			gameObject.SetActive(true);
-			yield return ShowAfterCoroutine(baseNode);
-			OnShowAfter();
-			_showCoroutine = null;
 		}
-		protected virtual IEnumerator ShowBeforeCoroutine(UINode baseNode) { yield break; }
-		protected virtual IEnumerator ShowAfterCoroutine(UINode baseNode) { yield break; }
+
+		IEnumerator ShowCoroutine(UINode callerNode)
+		{
+			if (_parent != this)
+			{
+				yield return _parent.ShowCoroutine(callerNode);
+			}
+			yield return UITreeView.StartCoroutine(ShowBeforeCoroutine(callerNode));
+			OnShowBefore();
+			gameObject.SetActive(true);
+			yield return UITreeView.StartCoroutine(ShowAfterCoroutine(callerNode));
+			OnShowAfter();
+			_completeShow = true;
+			_showCoroutine = null;
+			IsShow = true;
+		}
+		protected virtual IEnumerator ShowBeforeCoroutine(UINode callerNode) { yield break; }
+		protected virtual IEnumerator ShowAfterCoroutine(UINode callerNode) { yield break; }
 
 		/// <summary>
 		/// 閉じる
 		/// </summary>
 		public void Hide()
 		{
+			if (_hideCoroutine != null || _completeHide) { return; }
+			if (_showCoroutine!= null)
+            {
+				StopCoroutine(_showCoroutine);
+				ShowImmediately();
+				_showCoroutine = null;
+            }
+			_completeShow = false;
 			_hideCoroutine = UITreeView.StartCoroutine(HideCoroutine(this));
 		}
 
-		IEnumerator HideCoroutine(UINode baseNode)
-		{
-			yield return HideBeforeCoroutine(baseNode);
-			OnHideBefore();
+		void HideImmediately()
+        {
 			IsShow = false;
 			gameObject.SetActive(false);
-			foreach (var node in _childrenList)
-			{
-				yield return node.HideCoroutine(baseNode);
-			}
-			yield return HideAfterCoroutine(baseNode);
-			OnHideAfter();
-			_hideCoroutine = null;
 		}
 
-		protected virtual IEnumerator HideBeforeCoroutine(UINode baseNode) { yield break; }
-		protected virtual IEnumerator HideAfterCoroutine(UINode baseNode) { yield break; }
+		/// <summary>
+		/// 非表示にするルーチン
+		/// </summary>
+		/// <param name="callerNode">呼び出し元のUINode</param>
+		/// <returns></returns>
+		IEnumerator HideCoroutine(UINode callerNode)
+		{
+			yield return UITreeView.StartCoroutine(HideBeforeCoroutine(callerNode));
+			OnHideBefore();
+			gameObject.SetActive(false);
+			yield return UITreeView.StartCoroutine(HideAfterCoroutine(callerNode));
+			OnHideAfter();
+			foreach(var child in _childrenList)
+            {
+				child.HideImmediately();
+            }
+			_hideCoroutine = null;
+			_completeHide = true;
+			IsShow = false;
+		}
+
+		protected virtual IEnumerator HideBeforeCoroutine(UINode callerNode) { yield break; }
+		protected virtual IEnumerator HideAfterCoroutine(UINode callerNode) { yield break; }
 
 		/// <summary>
 		/// 初期化された時のコールバック(Awake時に呼ばれる)
@@ -144,7 +187,6 @@ namespace LightGive.UIUtil
 		/// UIが表示された後のコールバック
 		/// </summary>
 		protected virtual void OnShowAfter() { }
-
 		/// <summary>
         /// UIが非表示になる前のコールバック
         /// </summary>

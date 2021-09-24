@@ -12,46 +12,62 @@ namespace LightGive.UIUtil
 
         private void Reset() => _anim = gameObject.GetComponent<Animation>();
 
-        protected override IEnumerator ShowBeforeCoroutine(UINode baseNode)
+        protected override void OnInit()
         {
-            if (_anim == null || _showClip == null) { yield break; }
-            if (baseNode != this && !IsShow)
+            base.OnInit();
+            if (_anim != null) { 
+            _anim.playAutomatically = false;
+        }}
+
+        protected override IEnumerator ShowBeforeCoroutine(UINode callerNode)
+        {
+            if (_anim == null || _showClip == null || _anim.IsPlaying(_showClip.name))
             {
-                //スキップ
-                _anim.Play(_showClip.name, PlayMode.StopAll);
-                _anim[_showClip.name].normalizedTime = 1.0f;
                 yield break;
+            }
+            if (callerNode == this)
+            {
+                //呼び出し元のUINodeの処理
+                _anim[_showClip.name].time = 0.0f;
+                _anim.Play(_showClip.name, PlayMode.StopAll);
+                Debug.Log("IsPlaying:" + _anim.IsPlaying(_showClip.name));
             }
             else
             {
-                _anim[_showClip.name].time = 0.0f;
                 _anim.Play(_showClip.name, PlayMode.StopAll);
+                _anim[_showClip.name].normalizedTime = 1.0f;
             }
         }
 
-        protected override IEnumerator ShowAfterCoroutine(UINode baseNode)
+        protected override IEnumerator ShowAfterCoroutine(UINode callerNode)
         {
-            if (_anim == null || !_anim.isPlaying) { yield break; }
-            yield return AnimationEndCheck(_showClip.name);
+            if (!_anim.IsPlaying(_showClip.name) || callerNode != this)
+            {
+                yield break;
+            }
+            yield return UITreeView.StartCoroutine(AnimationEndCheck(_showClip.name));
         }
 
-        protected override IEnumerator HideBeforeCoroutine(UINode baseNode)
+        protected override IEnumerator HideBeforeCoroutine(UINode callerNode)
         {
-            if (_anim == null || _hideClip == null) { yield break; }
+            if (_anim == null || _hideClip == null || _anim.IsPlaying(_hideClip.name))
+            {
+                yield break;
+            }
             _anim.Play(_hideClip.name);
-            if (baseNode != this && IsShow)
+            if (callerNode == this)
+            {
+                _anim[_hideClip.name].time = 0.0f;
+                _anim.Play(_hideClip.name, PlayMode.StopAll);
+                yield return UITreeView.StartCoroutine(AnimationEndCheck(_hideClip.name));
+            }
+            else
             {
                 //スキップ
                 _anim.Play(_hideClip.name, PlayMode.StopAll);
                 _anim[_hideClip.name].normalizedTime = 1.0f;
                 yield break;
             }
-            else
-            {
-                _anim[_hideClip.name].time = 0.0f;
-                _anim.Play(_hideClip.name, PlayMode.StopAll);
-            }
-            yield return AnimationEndCheck(_hideClip.name);
         }
 
         /// <summary>
@@ -61,7 +77,12 @@ namespace LightGive.UIUtil
         /// <returns></returns>
         IEnumerator AnimationEndCheck(string animName)
         {
-            while (_anim.IsPlaying(animName)) { yield return null; }
+            while (_anim.IsPlaying(animName))
+            {
+                Debug.Log($"アニメーションの終了待ち{animName}");
+                yield return null;
+            }
+            yield return new WaitWhile(() => _anim.IsPlaying(animName));
         }
     }
 }
