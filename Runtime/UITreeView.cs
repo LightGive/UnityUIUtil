@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,8 +7,8 @@ namespace LightGive.UIUtil
     public class UITreeView : MonoBehaviour
     {
         [SerializeField] UINode _topNode = null;
+        [field: SerializeField] public bool DefaultReShowHide { get; private set; } = false;
         public List<UINode> AllNodeList { get; set; } = null;
-
         void Awake()
         {
             AllNodeList = new List<UINode>();
