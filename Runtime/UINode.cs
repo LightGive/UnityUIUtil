@@ -13,7 +13,7 @@ namespace LightGive.UIUtil
 		/// <summary>
 		/// 表示しているか
 		/// </summary>
-		public virtual bool IsShow { get; protected set; }
+		public virtual bool IsShow { get; protected set; } = false;
 		/// <summary>
 		/// 最上層のノードか
 		/// </summary>
@@ -41,12 +41,6 @@ namespace LightGive.UIUtil
 		UINode _parent;
 		Coroutine _showCoroutine = null;
 		Coroutine _hideCoroutine = null;
-		int frame = 0;
-
-        private void Update()
-        {
-			frame++;
-        }
 
 		/// <summary>
 		/// このUIを含め小階層のUIをリストに追加する
@@ -77,42 +71,82 @@ namespace LightGive.UIUtil
 			_childrenList.ForEach(c => c.Init());
 		}
 
-		/// <summary>
-		/// 子階層側が表示・非表示中か
-		/// </summary>
-		/// <returns></returns>
-		bool CanShowHideChild()
-		{
-			if (IsShowing || IsHiding) { return false; }
-			foreach (var child in _childrenList)
-			{
-				if (!child.CanShowHideChild()) { return false; }
-			}
-			return true;
+		void CancelForceShow()
+        {
+			if (!IsShowing) { return; }
+			UITreeView.StopCoroutine(_showCoroutine);
+			_showCoroutine = null;
+			ShowForce();
+			IsShow = true;
+		}
+
+		void CancelForceHide()
+        {
+            if (!IsHiding) { return; }
+			UITreeView.StopCoroutine(_hideCoroutine);
+			_hideCoroutine = null;
+			HideForce();
+			IsShow = false;
 		}
 
 		/// <summary>
-		/// 親階層側が表示・非表示中か
+		/// 親階層側が表示可能か
+		/// ・親階層で表示中だった時は強制的に表示させる
+		/// ・親階層で非表示中だった時は表示不可とする（いつ非表示になるか分からないため）
 		/// </summary>
 		/// <returns></returns>
 		bool CanShowHideParent()
 		{
 			if (IsTopNode) { return true; }
-			if (IsShowing || IsHiding) { return false; }
-			return _parent.CanShowHideParent();
+			if (!_parent.CanShowHideParent()) { return false; }
+
+			//非表示中の時は処理しない
+			if (IsHiding)
+			{
+				Debug.LogError($"{name}が非表示中。親階層で非表示中のUINodeがあると子階層で表示・非表示にする事が出来ない");
+				return false;
+			}
+
+			//表示中の処理を一旦止めて強制的に表示状態にする
+			CancelForceShow();
+			return true;
 		}
 
 		/// <summary>
-		/// UIを表示する
+		/// 子階層が表示・非表示中だった時はスキップする
 		/// </summary>
-		public void Show()
+		void ChildShowHideForce()
 		{
-			//TODO:非表示中の時も表示できるように。
-			if (!CanShowHideParent() || !CanShowHideChild() || IsShow)
+			//子階層側から先に処理
+			//親階層から処理すると子階層に影響が出るため
+			foreach (var child in _childrenList)
 			{
-				Debug.LogError("表示することが出来ない");
-				return;
+				child.ChildShowHideForce();
 			}
+			CancelForceShow();
+			CancelForceHide();
+		}
+
+		/// <summary>
+        /// 表示する
+        /// </summary>
+        /// <param name="canReshow">再表示を許可するか
+        /// 引数に何も入れない場合はUITreeViewで設定したデフォルトの値になる</param>
+		public void Show(bool? canReshow = null)
+		{
+			if (canReshow == null) { canReshow = UITreeView.DefaultReShowHide; }
+			//親階層のチェック
+			if (_parent != null && !_parent.CanShowHideParent()) { return; }
+			if (!canReshow.Value && (IsShow || IsShowing || IsHiding)) { return; }
+			CancelForceShow();
+			CancelForceHide();
+			if (IsShow)
+			{
+				gameObject.SetActive(false);
+				IsShow = false;
+			}
+			//子階層の表示・非表示中の処理をスキップ
+			ChildShowHideForce();
 			_showCoroutine = UITreeView.StartCoroutine(ShowCoroutine());
 		}
 
@@ -163,19 +197,26 @@ namespace LightGive.UIUtil
 		protected virtual IEnumerator ShowBeforeCoroutine() { yield break; }
 		protected virtual IEnumerator ShowAfterCoroutine() { yield break; }
 
-
-
 		/// <summary>
 		/// 閉じる
 		/// </summary>
-		public void Hide()
+		/// <param name="canRehide">再度非表示に出来るようにするか
+		/// 引数に何も入れない場合はUITreeViewで設定したデフォルトの値になる</param>
+		public void Hide(bool? canRehide = null)
 		{
-			//TODO:表示中の時も非表示にすることができるように
-			if (!CanShowHideParent() || !CanShowHideChild() || !IsShow)
+			if (canRehide == null) { canRehide = UITreeView.DefaultReShowHide; }
+			if (_parent != null && !_parent.CanShowHideParent()) { return; }
+			//再非表示不可の場合、表示中、非表示中は処理しない
+			if (!canRehide.Value && (!IsShow || IsShowing || IsHiding)) { return; }
+			CancelForceShow();
+			CancelForceHide();
+			if (!IsShow)
 			{
-				Debug.LogError("非表示にすることが出来ない");
-				return;
+				gameObject.SetActive(true);
+				IsShow = true;
 			}
+			//子階層の表示・非表示中の処理をスキップ
+			ChildShowHideForce();
 			_hideCoroutine = UITreeView.StartCoroutine(HideCoroutine());
 		}
 
@@ -186,10 +227,6 @@ namespace LightGive.UIUtil
 		/// <returns></returns>
 		IEnumerator HideCoroutine()
 		{
-			foreach(var child in _childrenList)
-            {
-				child.HideForceRecursively();
-            }
 			yield return UITreeView.StartCoroutine(HideBeforeCoroutine());
 			OnHideBefore();
 			gameObject.SetActive(false);
@@ -203,21 +240,7 @@ namespace LightGive.UIUtil
 		protected virtual IEnumerator HideAfterCoroutine() { yield break; }
 
 		/// <summary>
-		/// 表示処理（再帰用）
-		/// </summary>
-		/// <returns></returns>
-		void HideForceRecursively()
-		{
-			foreach(var child in _childrenList)
-            {
-				child.HideForceRecursively();
-            }
-            if (!IsShow) { return; }
-			HideForce();
-			IsShow = false;
-		}
-		/// <summary>
-		/// 強制的に表示する
+		/// 強制的に非表示にする
 		/// </summary>
 		protected virtual void HideForce()
 		{

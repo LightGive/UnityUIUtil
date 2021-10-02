@@ -9,7 +9,6 @@ namespace LightGive.UIUtil
         [SerializeField] AnimationClip _showClip = null;
         [SerializeField] AnimationClip _hideClip = null;
         [SerializeField] Animation _anim = null;
-
         private void Reset() => _anim = gameObject.GetComponent<Animation>();
 
         protected override void OnInit()
