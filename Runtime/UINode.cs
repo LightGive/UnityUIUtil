@@ -142,8 +142,10 @@ namespace LightGive.UIUtil
 		/// <returns></returns>
 		void ShowForceRecursively()
 		{
-			if (IsTopNode) { return; }
-			_parent.ShowForceRecursively();
+			if (!IsTopNode)
+			{
+				_parent.ShowForceRecursively();
+			}
 			if (IsShow)
 			{
 				return;
