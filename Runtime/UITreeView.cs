@@ -15,16 +15,9 @@ namespace LightGive.UIUtil
             AllNodeList = new List<UINode>();
             UIIDType.Init();
             _topNode.Init();
-            _topNode.SetList(AllNodeList, _topNode);
+            _topNode.SetList(AllNodeList, null);
             AllNodeList.ForEach(x => x.UITreeView = this);
         }
-
-        /// <summary>
-        /// 一番上の階層か
-        /// </summary>
-        /// <param name="uiNode"></param>
-        /// <returns></returns>
-        public bool IsTopNode(UINode uiNode) => uiNode == _topNode;
 
         /// <summary>
         /// ノードを継承したUIを取得する
