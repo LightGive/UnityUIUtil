@@ -10,15 +10,13 @@ namespace LightGive.UIUtil
         [SerializeField] UINode _topNode = null;
         public List<UINode> AllNodeList { get; set; } = null;
 
-        private void Awake()
+        void Awake()
         {
             AllNodeList = new List<UINode>();
-            _topNode.IsTopNode = true;
+            UIIDType.Init();
             _topNode.Init();
-            _topNode.SetList(AllNodeList, _topNode);
+            _topNode.SetList(AllNodeList, null);
             AllNodeList.ForEach(x => x.UITreeView = this);
-            var count = _topNode.SetID(0);
-            Debug.Log("全てのUIノード数" + count.ToString());
         }
 
         /// <summary>
