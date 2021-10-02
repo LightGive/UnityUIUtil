@@ -78,15 +78,28 @@ namespace LightGive.UIUtil
 		}
 
 		/// <summary>
-        /// 表示させることができるか
-		/// 親階層のUIが表示中、非表示中は表示出来ない
+		/// 子階層側が表示・非表示中か
 		/// </summary>
 		/// <returns></returns>
-		public bool CanShow()
+		bool CanShowHideChild()
+		{
+			if (IsShowing || IsHiding) { return false; }
+			foreach (var child in _childrenList)
+			{
+				if (!child.CanShowHideChild()) { return false; }
+			}
+			return true;
+		}
+
+		/// <summary>
+		/// 親階層側が表示・非表示中か
+		/// </summary>
+		/// <returns></returns>
+		bool CanShowHideParent()
 		{
 			if (IsTopNode) { return true; }
 			if (IsShowing || IsHiding) { return false; }
-			return _parent.CanShow();
+			return _parent.CanShowHideParent();
 		}
 
 		/// <summary>
@@ -95,7 +108,7 @@ namespace LightGive.UIUtil
 		public void Show()
 		{
 			//TODO:非表示中の時も表示できるように。
-			if (!CanShow() || IsShow)
+			if (!CanShowHideParent() || !CanShowHideChild() || IsShow)
 			{
 				Debug.LogError("表示することが出来ない");
 				return;
@@ -148,24 +161,7 @@ namespace LightGive.UIUtil
 		protected virtual IEnumerator ShowBeforeCoroutine() { yield break; }
 		protected virtual IEnumerator ShowAfterCoroutine() { yield break; }
 
-		/// <summary>
-		/// 非表示にすることができるか
-		/// </summary>
-		/// <returns></returns>
-		public bool CanHide()
-		{
-			if (IsShowing || IsHiding) { return false; }
-			var canHide = true;
-			foreach (var child in _childrenList)
-			{
-				if (!child.CanHide())
-				{
-					canHide = false;
-					break;
-				}
-			}
-			return canHide;
-		}
+
 
 		/// <summary>
 		/// 閉じる
@@ -173,7 +169,7 @@ namespace LightGive.UIUtil
 		public void Hide()
 		{
 			//TODO:表示中の時も非表示にすることができるように
-			if (!IsShow || !CanHide())
+			if (!CanShowHideParent() || !CanShowHideChild() || !IsShow)
 			{
 				Debug.LogError("非表示にすることが出来ない");
 				return;
