@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace LightGive.UIUtil
 {
@@ -128,11 +129,14 @@ namespace LightGive.UIUtil
 		}
 
 		/// <summary>
-        /// 表示する
-        /// </summary>
-        /// <param name="canReshow">再表示を許可するか
-        /// 引数に何も入れない場合はUITreeViewで設定したデフォルトの値になる</param>
-		public void Show(bool? canReshow = null)
+		/// 表示する
+		/// </summary>
+		/// <param name="canReshow">再表示を許可するか</param>
+		/// <param name="onShowBefore">表示前のコールバック
+		/// OnShowBeforeよりは後に呼ばれる</param>
+		/// <param name="onShowAfter">表示後のコールバック
+		/// OnShowAfterより後に呼ばれる</param>
+		public void Show(bool? canReshow = null, UnityAction onShowBefore = null, UnityAction onShowAfter = null)
 		{
 			if (canReshow == null) { canReshow = UITreeView.DefaultReShowHide; }
 			//親階層のチェック
@@ -151,10 +155,12 @@ namespace LightGive.UIUtil
 		}
 
 		/// <summary>
-        /// 表示処理
-        /// </summary>
-        /// <returns></returns>
-		IEnumerator ShowCoroutine()
+		/// 表示処理
+		/// </summary>
+		/// <param name="onShowBefore"></param>
+		/// <param name="onShowAfter"></param>
+		/// <returns></returns>
+		IEnumerator ShowCoroutine(UnityAction onShowBefore = null, UnityAction onShowAfter = null)
 		{
 			if (!IsTopNode)
 			{
@@ -163,9 +169,11 @@ namespace LightGive.UIUtil
 			}
 			yield return UITreeView.StartCoroutine(ShowBeforeCoroutine());
 			OnShowBefore();
+			onShowBefore?.Invoke();
 			gameObject.SetActive(true);
 			yield return UITreeView.StartCoroutine(ShowAfterCoroutine());
 			OnShowAfter();
+			onShowAfter?.Invoke();
 			_showCoroutine = null;
 			IsShow = true;
 		}
@@ -200,9 +208,12 @@ namespace LightGive.UIUtil
 		/// <summary>
 		/// 閉じる
 		/// </summary>
-		/// <param name="canRehide">再度非表示に出来るようにするか
-		/// 引数に何も入れない場合はUITreeViewで設定したデフォルトの値になる</param>
-		public void Hide(bool? canRehide = null)
+		/// <param name="canRehide">再度非表示に出来るようにするか</param>
+		/// <param name="onHideBefore">表示前のコールバック
+		/// OnHideBeforeよりは後に呼ばれる</param>
+		/// <param name="onHideAfter">表示後のコールバック
+		/// OnHideAfterより後に呼ばれる</param>
+		public void Hide(bool? canRehide = null, UnityAction onHideBefore = null, UnityAction onHideAfter = null)
 		{
 			if (canRehide == null) { canRehide = UITreeView.DefaultReShowHide; }
 			if (_parent != null && !_parent.CanShowHideParent()) { return; }
@@ -221,17 +232,20 @@ namespace LightGive.UIUtil
 		}
 
 		/// <summary>
-		/// 非表示にするルーチン
+		/// 非表示処理
 		/// </summary>
-		/// <param name="callerNode">呼び出し元のUINode</param>
+		/// <param name="onHideBefore"></param>
+		/// <param name="onHideAfter"></param>
 		/// <returns></returns>
-		IEnumerator HideCoroutine()
+		IEnumerator HideCoroutine(UnityAction onHideBefore = null, UnityAction onHideAfter = null)
 		{
 			yield return UITreeView.StartCoroutine(HideBeforeCoroutine());
 			OnHideBefore();
+			onHideBefore?.Invoke();
 			gameObject.SetActive(false);
 			yield return UITreeView.StartCoroutine(HideAfterCoroutine());
 			OnHideAfter();
+			onHideAfter?.Invoke();
 			_hideCoroutine = null;
 			IsShow = false;
 		}
