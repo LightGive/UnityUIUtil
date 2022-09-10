@@ -151,7 +151,7 @@ namespace LightGive.UIUtil
 			}
 			//子階層の表示・非表示中の処理をスキップ
 			ChildShowHideForce();
-			_showCoroutine = UITreeView.StartCoroutine(ShowCoroutine());
+			_showCoroutine = UITreeView.StartCoroutine(ShowCoroutine(onShowBefore, onShowAfter));
 		}
 
 		/// <summary>
@@ -228,7 +228,7 @@ namespace LightGive.UIUtil
 			}
 			//子階層の表示・非表示中の処理をスキップ
 			ChildShowHideForce();
-			_hideCoroutine = UITreeView.StartCoroutine(HideCoroutine());
+			_hideCoroutine = UITreeView.StartCoroutine(HideCoroutine(onHideBefore, onHideAfter));
 		}
 
 		/// <summary>
